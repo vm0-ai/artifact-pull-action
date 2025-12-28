@@ -28,7 +28,9 @@ Pull VM0 cloud artifacts to your GitHub Actions workflow.
 |--------|-------------|
 | `success` | Whether the pull completed successfully |
 
-## Example
+## Examples
+
+### Basic Usage
 
 ```yaml
 name: Pull Artifact
@@ -47,6 +49,46 @@ jobs:
           artifact-name: "my-data"
           path: "./data"
           vm0-token: ${{ secrets.VM0_TOKEN }}
+
+      - name: Use artifact
+        run: ls -la ./data
+```
+
+### With GitHub Artifacts
+
+Pull VM0 artifact and upload to GitHub Artifacts for use in other jobs or workflows:
+
+```yaml
+name: Sync VM0 to GitHub Artifact
+
+on: [workflow_dispatch]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull VM0 Artifact
+        uses: vm0-ai/artifact-pull-action@v1
+        with:
+          artifact-name: "my-data"
+          path: "./data"
+          vm0-token: ${{ secrets.VM0_TOKEN }}
+
+      - name: Upload to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-data
+          path: ./data
+
+  use-artifact:
+    needs: sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download from GitHub Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: my-data
+          path: ./data
 
       - name: Use artifact
         run: ls -la ./data
