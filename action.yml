@@ -1,0 +1,103 @@
+name: "VM0 Artifact Pull"
+description: "Pull VM0 cloud artifacts to your GitHub Actions workflow"
+author: "vm0-ai"
+branding:
+  icon: "download"
+  color: "blue"
+
+inputs:
+  artifact-name:
+    description: "Artifact name to pull"
+    required: true
+  path:
+    description: "Destination path for the artifact (default: current directory)"
+    required: false
+    default: "."
+  version-id:
+    description: "Version ID to pull (default: latest)"
+    required: false
+  vm0-token:
+    description: "VM0 authentication token (use secrets.VM0_TOKEN)"
+    required: true
+  vm0-api-url:
+    description: "VM0 API URL"
+    required: false
+    default: "https://www.vm0.ai"
+  cli-version:
+    description: "@vm0/cli version to install"
+    required: false
+    default: "latest"
+
+outputs:
+  success:
+    description: "Whether the pull completed successfully"
+    value: ${{ steps.pull.outputs.success }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install VM0 CLI
+      shell: bash
+      run: |
+        echo "Installing @vm0/cli@${{ inputs.cli-version }}..."
+        npm install -g @vm0/cli@${{ inputs.cli-version }}
+        echo "VM0 CLI installed: $(vm0 --version)"
+
+    - name: Pull Artifact
+      id: pull
+      shell: bash
+      env:
+        VM0_TOKEN: ${{ inputs.vm0-token }}
+        VM0_API_URL: ${{ inputs.vm0-api-url }}
+      run: |
+        ARTIFACT_NAME="${{ inputs.artifact-name }}"
+        DEST_PATH="${{ inputs.path }}"
+        VERSION_ID="${{ inputs.version-id }}"
+
+        # Create destination directory if it doesn't exist
+        mkdir -p "$DEST_PATH"
+        cd "$DEST_PATH"
+
+        # Initialize artifact configuration
+        mkdir -p .vm0
+        echo "name: $ARTIFACT_NAME" > .vm0/storage.yaml
+        echo "type: artifact" >> .vm0/storage.yaml
+
+        # Build pull command
+        CMD="vm0 artifact pull"
+        if [ -n "$VERSION_ID" ]; then
+          CMD="$CMD '$VERSION_ID'"
+        fi
+
+        echo "Pulling artifact '$ARTIFACT_NAME' to '$DEST_PATH'..."
+        echo "Executing: $CMD"
+        echo ""
+
+        # Execute pull
+        set +e
+        eval $CMD
+        EXIT_CODE=$?
+        set -e
+
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "success=true" >> $GITHUB_OUTPUT
+          echo ""
+          echo "=== Pull Summary ==="
+          echo "Artifact: $ARTIFACT_NAME"
+          echo "Destination: $DEST_PATH"
+          echo "Success: true"
+        else
+          echo "success=false" >> $GITHUB_OUTPUT
+          echo ""
+          echo "=== Pull Summary ==="
+          echo "Artifact: $ARTIFACT_NAME"
+          echo "Destination: $DEST_PATH"
+          echo "Success: false"
+        fi
+
+        exit $EXIT_CODE
