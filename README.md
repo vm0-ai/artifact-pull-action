@@ -79,19 +79,6 @@ jobs:
         with:
           name: my-data
           path: ./data
-
-  use-artifact:
-    needs: sync
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download from GitHub Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: my-data
-          path: ./data
-
-      - name: Use artifact
-        run: ls -la ./data
 ```
 
 ## License
