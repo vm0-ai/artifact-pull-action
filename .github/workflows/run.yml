@@ -1,0 +1,40 @@
+name: Run Agent
+
+on:
+  # Uncomment to enable scheduled runs:
+  # schedule:
+  #   - cron: '0 1 * * *'  # Daily at 9:00 AM UTC+8
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Prompt for the agent'
+        required: false
+        default: 'do the job'
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Agent
+        uses: vm0-ai/run-action@v1
+        with:
+          agent: artifact-pull-test
+          prompt: ${{ github.event.inputs.prompt || 'do the job' }}
+          silent: true
+          vm0-token: ${{ secrets.VM0_TOKEN }}
+          artifact-name: artifact
+          secrets: |
+            CLAUDE_CODE_OAUTH_TOKEN=${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Pull VM0 Artifact
+        uses: vm0-ai/artifact-pull-action@v1
+        with:
+          artifact-name: artifact
+          path: "./data"
+          vm0-token: ${{ secrets.VM0_TOKEN }}
+
+      - name: Upload to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vm0-artifact
+          path: ./data
